@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: profile-lookup-api
+
+server:
+  port: ${PORT:8080}
+
+profile:
+  # fixture (default) or stub -- see ProfileSourceConfig
+  source: ${PROFILE_SOURCE:fixture}
+  fixture-path: classpath:fixtures/sample-profiles.json
+  # Comma-separated. Set via env var in real deployments -- never commit
+  # real keys. See .env.example.
+  api-keys: ${PROFILE_API_KEYS:demo-key-change-me}
+
+ratelimit:
+  capacity: ${RATELIMIT_CAPACITY:20}
+  refill-period-seconds: ${RATELIMIT_REFILL_SECONDS:60}
+
+springdoc:
+  swagger-ui:
+    path: /docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never

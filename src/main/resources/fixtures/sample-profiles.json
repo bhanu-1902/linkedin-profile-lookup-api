@@ -1,0 +1,34 @@
+{
+  "_comment": "PLACEHOLDER DATA. Replace this file's contents with data derived from your own LinkedIn export (Settings & Privacy > Data Privacy > Get a copy of your data > Profile.csv, Positions.csv, Education.csv, Skills.csv, Certifications.csv, Languages.csv). Keyed by normalized profile URL (scheme+host+path, no query string, no trailing slash).",
+  "profiles": [
+    {
+      "linkedInUrl": "https://www.linkedin.com/in/example-profile",
+      "name": "Alex Example",
+      "headline": "Software Engineer",
+      "location": "Bengaluru, Karnataka, India",
+      "about": "Placeholder 'about' text -- replace with your own export's summary field.",
+      "experience": [
+        {
+          "title": "Software Engineer",
+          "organization": "Example Corp",
+          "startDate": "2022-07",
+          "endDate": "",
+          "description": "Placeholder role description."
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example University",
+          "degree": "B.Tech",
+          "fieldOfStudy": "Computer Science",
+          "startDate": "2018",
+          "endDate": "2022"
+        }
+      ],
+      "skills": ["Java", "Spring Boot", "System Design"],
+      "certifications": [],
+      "languages": ["English"],
+      "profileImageUrls": []
+    }
+  ]
+}

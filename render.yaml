@@ -1,0 +1,17 @@
+# Render Blueprint. See README "Deploying" for the manual-setup alternative.
+services:
+  - type: web
+    name: profile-lookup-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: PROFILE_SOURCE
+        value: fixture
+      - key: PROFILE_API_KEYS
+        generateValue: true
+      - key: RATELIMIT_CAPACITY
+        value: "20"
+      - key: RATELIMIT_REFILL_SECONDS
+        value: "60"
+    healthCheckPath: /actuator/health
