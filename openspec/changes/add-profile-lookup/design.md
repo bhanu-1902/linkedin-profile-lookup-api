@@ -67,6 +67,28 @@ Positions.csv, Education.csv, Skills.csv, Certifications.csv,
 Languages.csv), so the fixture loader is honest about the data's real
 shape rather than a schema invented for convenience.
 
+**Rejected approach: a third-party "people data" broker adapter (e.g.
+People Data Labs).** Considered during a post-implementation review that
+otherwise caught real bugs (see Risks/Trade-offs addendum below) and
+explicitly rejected. On its face this looks different from scraping
+LinkedIn directly -- it's a paid API, not credentials in the backend.
+It isn't different in the way that matters. PDL's own documentation
+describes two data-source categories, one of which is "public data
+sources" (the public web); an independent 2025 industry analysis names
+PDL specifically as sourcing via "web scraping (including public
+LinkedIn profiles)"; PDL was the identified source of 420M+ LinkedIn
+URLs in the 2019 exposure of 1.2 billion records; and PDL agreed to a
+$6.36M settlement (preliminarily approved June 30, 2026) over including
+people's phone numbers in a commercial directory without consent. Using
+a broker changes which party is the proximate one doing non-consensual
+collection. It does not change what the deployed system does: given any
+LinkedIn URL, return that person's professional history, obtained
+without their consent, served through a public API. The one broadly
+sanctioned "live" path remains what's noted below: OAuth for the
+*authenticated caller's own* profile, which doesn't satisfy the
+brief's literal ask (arbitrary third-party lookup) and is exactly why
+it's out of scope rather than built.
+
 **Rejected approach: a `LinkedInScrapeProfileSource` adapter.** Considered
 and explicitly rejected. It would satisfy the brief's literal wording but
 requires authenticating to LinkedIn with real credentials and retrieving
@@ -90,6 +112,18 @@ the architecture doesn't foreclose it, it isolates it, and it isn't built.
   may drift] → `pom.xml` pins versions verified at write time; first
   `mvn clean install` is the real compatibility check, called out in the
   README as an expected first step rather than assumed already clean.
+
+- [Sandbox that wrote this code cannot reach Maven Central] → A real
+  local `mvn`/`docker` build is the actual first verification pass, not
+  something already confirmed here. A first such attempt did catch a
+  real bug (`--` inside an XML comment in `pom.xml` -- illegal
+  anywhere in a comment's body, not just at the boundaries) that only a
+  real `mvn`/IDE parse could have caught. Treat every claim in this
+  document about Spring-dependent code as "written carefully," not
+  "verified," until your own build says otherwise -- the domain layer
+  (compiled standalone with plain `javac`, repeatedly, including after
+  later additions) is the one part of this codebase where "verified" is
+  actually earned.
 
 ## Migration Plan
 

@@ -36,4 +36,15 @@ class FixtureProfileSourceTest extends ProfileSourceContractTest {
                 "https://www.linkedin.com/in/example-profile/?trk=nav"))
                 .isPresent();
     }
+
+    @Test
+    void absentFieldsAreNullNotEmptyString() {
+        Profile sparse = fixtureSource
+                .findByUrl("https://www.linkedin.com/in/example-incomplete-profile")
+                .orElseThrow();
+
+        assertThat(sparse.about()).isNull();
+        assertThat(sparse.experience().get(0).endDate()).isNull();
+        assertThat(sparse.certifications()).isEmpty();
+    }
 }

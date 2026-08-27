@@ -9,10 +9,11 @@
         <artifactId>spring-boot-starter-parent</artifactId>
         <!--
           Spring Boot 4.1.1 was current as of August 2026 (verified via
-          web search at build time, not from training data -- Boot moved
-          to a new major version, 4.0, in November 2025). If this has
-          moved on when you build, `mvn versions:display-parent-updates`
-          will tell you; bumping the patch version here is normally safe.
+          web search at build time, not from training data).
+          Boot moved to a new major version, 4.0, in November 2025.
+          If this has moved on when you build,
+          `mvn versions:display-parent-updates` will tell you;
+          bumping the patch version here is normally safe.
         -->
         <version>4.1.1</version>
         <relativePath/>
@@ -33,11 +34,11 @@
         <java.version>17</java.version>
         <!--
           springdoc-openapi's Spring-Boot-4-compatible line, verified via
-          web search at build time (springdoc.org/v4). Check for a newer
-          3.x patch when you first build -- this line moves fast.
+          web search at build time (springdoc.org/v4). This line moves
+          fast; check for a newer 3.x patch when you first build.
         -->
         <springdoc.version>3.0.3</springdoc.version>
-        <!-- bucket4j-core has no Spring dependency, so it's Boot-version-agnostic. -->
+        <!-- bucket4j-core has no Spring dependency, so it is Boot-version agnostic. -->
         <bucket4j.version>8.10.1</bucket4j.version>
     </properties>
 
@@ -46,10 +47,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
+        <!--
+          No spring-boot-starter-validation: URL validation lives in
+          domain.LinkedInProfileUrls, a plain Java utility, not Bean
+          Validation annotations. One fewer dependency, and one shared
+          definition instead of a regex here and separate parsing logic
+          in the adapter.
+        -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>

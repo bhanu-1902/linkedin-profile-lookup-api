@@ -1,13 +1,11 @@
 package com.profilelookup.interfaces.rest;
 
-import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
-import java.util.List;
 
 /**
  * One handler for every /v1/** error case, all returning RFC 9457
@@ -19,6 +17,16 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(InvalidProfileUrlException.class)
+    public ProblemDetail handleInvalidUrl(InvalidProfileUrlException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "url must be a valid LinkedIn profile URL, e.g. https://www.linkedin.com/in/<handle>");
+        problem.setType(URI.create("https://profilelookup.example/problems/validation-error"));
+        problem.setProperty("submittedValue", ex.getSubmittedValue());
+        return problem;
+    }
+
     @ExceptionHandler(ProfileNotAvailableException.class)
     public ProblemDetail handleProfileNotAvailable(ProfileNotAvailableException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
@@ -28,19 +36,6 @@ public class GlobalExceptionHandler {
                         + "(see README, 'Known limitations').");
         problem.setType(URI.create("https://profilelookup.example/problems/no-live-data-source"));
         problem.setProperty("requestedUrl", ex.getRequestedUrl());
-        return problem;
-    }
-
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ProblemDetail handleValidation(ConstraintViolationException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST, "Request validation failed.");
-        problem.setType(URI.create("https://profilelookup.example/problems/validation-error"));
-
-        List<String> errors = ex.getConstraintViolations().stream()
-                .map(v -> v.getPropertyPath() + ": " + v.getMessage())
-                .toList();
-        problem.setProperty("errors", errors);
         return problem;
     }
 

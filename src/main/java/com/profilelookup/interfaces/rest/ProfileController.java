@@ -1,11 +1,9 @@
 package com.profilelookup.interfaces.rest;
 
 import com.profilelookup.application.ProfileLookupService;
+import com.profilelookup.domain.LinkedInProfileUrls;
 import com.profilelookup.domain.Profile;
 import com.profilelookup.interfaces.rest.dto.ProfileResponse;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,17 +14,18 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code @GetMapping} and {@code ProfileResponse}; knows nothing about
  * fixtures, stubs, or how a lookup is actually performed.
  *
- * {@code @Validated} at the class level (not just {@code @Valid} on a
- * body) is what makes Bean Validation annotations on a
- * {@code @RequestParam} actually run.
+ * URL validation delegates entirely to {@link LinkedInProfileUrls}
+ * rather than a Bean Validation {@code @Pattern} regex -- one shared,
+ * unit-testable definition of "valid LinkedIn profile URL" instead of a
+ * regex here and separate string-munging in the fixture adapter. The
+ * param is {@code required = false} so a missing {@code url} and an
+ * empty/malformed one produce the same problem+json response through
+ * one code path, rather than Spring's default missing-parameter error
+ * bypassing GlobalExceptionHandler.
  */
 @RestController
 @RequestMapping("/v1")
-@Validated
 public class ProfileController {
-
-    private static final String LINKEDIN_PROFILE_URL_PATTERN =
-            "^https://(www\\.)?linkedin\\.com/in/[a-zA-Z0-9\\-_%]+/?$";
 
     private final ProfileLookupService profileLookupService;
 
@@ -35,16 +34,12 @@ public class ProfileController {
     }
 
     @GetMapping("/profile")
-    public ProfileResponse getProfile(
-            @RequestParam
-            @NotBlank(message = "url is required")
-            @Pattern(
-                    regexp = LINKEDIN_PROFILE_URL_PATTERN,
-                    message = "url must look like https://www.linkedin.com/in/<handle>")
-            String url) {
+    public ProfileResponse getProfile(@RequestParam(required = false) String url) {
+        String canonicalUrl = LinkedInProfileUrls.canonicalize(url)
+                .orElseThrow(() -> new InvalidProfileUrlException(url));
 
-        Profile profile = profileLookupService.lookup(url)
-                .orElseThrow(() -> new ProfileNotAvailableException(url));
+        Profile profile = profileLookupService.lookup(canonicalUrl)
+                .orElseThrow(() -> new ProfileNotAvailableException(canonicalUrl));
 
         return ProfileResponse.from(profile);
     }

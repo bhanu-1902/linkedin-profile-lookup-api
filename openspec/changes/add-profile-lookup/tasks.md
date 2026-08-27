@@ -8,11 +8,16 @@
 
 ## 2. Domain layer
 
-- [ ] 2.1 Implement `Profile` entity and verify it compiles standalone
+- [x] 2.1 Implement `Profile` entity and verify it compiles standalone
       with `javac` (no framework imports — this is the layer's whole
-      point)
-- [ ] 2.2 Implement `ProfileSource` port and the domain-level
+      point). Verified repeatedly, including after the 2.3 addition.
+- [x] 2.2 Implement `ProfileSource` port and the domain-level
       "not available" signal, verified the same way
+- [x] 2.3 Implement `LinkedInProfileUrls` (canonicalization/validation)
+      as a framework-free domain utility shared by the controller and
+      `FixtureProfileSource`, replacing a duplicated regex-in-controller
+      / string-munging-in-adapter split. Verified the same way, plus
+      a dedicated unit test (untested by a real build — see note below).
 
 ## 3. Application layer
 
@@ -58,3 +63,34 @@
 
 - [ ] 7.1 Run `openspec archive add-profile-lookup` once all tasks above
       are checked and verify the capability lands in `openspec/specs/`
+
+## 8. Remediation round (post-review fixes)
+
+Prompted by a real local build attempt catching what this environment
+could not (no Maven Central access here — see design.md addendum
+below). All items in this group are written and internally consistent,
+but share the same "needs a real `mvn`/`docker` run to confirm" status
+as everything above; none are checked off on the strength of code
+review alone.
+
+- [ ] 8.1 Fix illegal `--` inside XML comments in `pom.xml` and verify
+      with a real XML parser (done: `xml.etree.ElementTree` confirms
+      well-formed) *and* with `mvn` itself actually parsing the POM
+- [ ] 8.2 Make absent profile fields serialize as omitted, not `""`
+      (`spring.jackson.default-property-inclusion=non_null` +
+      nullable `Profile` scalar fields) and verify via the new
+      `absentFieldsAreOmittedFromTheJsonBodyEntirely` integration test
+- [ ] 8.3 Fix integration-test rate-limit isolation (one API key per
+      test instead of one shared key) and verify the full suite passes
+      regardless of JUnit's method execution order
+- [ ] 8.4 Add the Maven Wrapper, fetched verbatim from the
+      `apache/maven-wrapper` project's own tagged release rather than
+      reproduced from memory, and verify `./mvnw -v` on a real machine
+- [ ] 8.5 Add a CI workflow (test, package, container build, OpenSpec
+      `validate --strict --all`) and verify it goes green on a real push
+- [ ] 8.6 Confirm whether `com.fasterxml.jackson.databind` resolves
+      against the pinned Spring Boot 4.1.1 / springdoc 3.0.3 versions,
+      or whether Jackson 3's `tools.jackson` namespace is required —
+      genuinely open, needs a real compiler error message to resolve,
+      not further guessing
+

@@ -81,10 +81,10 @@ public final class Profile {
      */
     public static final class Builder {
         private final String linkedInUrl;
-        private String name = "";
-        private String headline = "";
-        private String location = "";
-        private String about = "";
+        private String name;
+        private String headline;
+        private String location;
+        private String about;
         private List<Experience> experience = List.of();
         private List<Education> education = List.of();
         private List<String> skills = List.of();

@@ -1,6 +1,12 @@
 spring:
   application:
     name: profile-lookup-api
+  jackson:
+    # A missing field (e.g. an in-progress role's endDate, or a section
+    # the source data doesn't have) is omitted from the response body
+    # entirely, not serialized as null or "". Matches spec.md, "Known
+    # profile returned": "omitting any field that is not present."
+    default-property-inclusion: non_null
 
 server:
   port: ${PORT:8080}

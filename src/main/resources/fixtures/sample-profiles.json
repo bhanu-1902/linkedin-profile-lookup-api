@@ -29,6 +29,24 @@
       "certifications": [],
       "languages": ["English"],
       "profileImageUrls": []
+    },
+    {
+      "_comment": "Deliberately incomplete: no 'about', no certifications/languages/images, and a current role with no endDate -- proves the API omits absent fields instead of printing '' or null.",
+      "linkedInUrl": "https://www.linkedin.com/in/example-incomplete-profile",
+      "name": "Sam Sparse",
+      "headline": "Backend Engineer",
+      "location": "Mumbai, Maharashtra, India",
+      "experience": [
+        {
+          "title": "Backend Engineer",
+          "organization": "Example Corp",
+          "startDate": "2023-01",
+          "endDate": null,
+          "description": "Currently employed here -- endDate is intentionally absent."
+        }
+      ],
+      "education": [],
+      "skills": ["Python", "PostgreSQL"]
     }
   ]
 }

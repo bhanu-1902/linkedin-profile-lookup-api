@@ -2,6 +2,7 @@ package com.profilelookup.infrastructure.fixture;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.profilelookup.domain.LinkedInProfileUrls;
 import com.profilelookup.domain.Profile;
 import com.profilelookup.domain.ProfileSource;
 import com.profilelookup.domain.ProfileSourceException;
@@ -66,7 +67,14 @@ public class FixtureProfileSource implements ProfileSource {
 
     @Override
     public Optional<Profile> findByUrl(String linkedInUrl) {
-        return Optional.ofNullable(profilesByUrl.get(normalize(linkedInUrl)));
+        // Defensive: the controller always canonicalizes before calling
+        // here, but this adapter re-canonicalizes with the SAME shared
+        // utility rather than its own normalize() logic, so there is
+        // exactly one definition of "canonical LinkedIn URL" in the
+        // whole codebase, not one in the controller and a second one
+        // here that could quietly drift apart from it.
+        return LinkedInProfileUrls.canonicalize(linkedInUrl)
+                .map(profilesByUrl::get);
     }
 
     private void loadFixtures(Resource fixtureResource) {
@@ -75,7 +83,10 @@ public class FixtureProfileSource implements ProfileSource {
             FixtureFile file = mapper.readValue(in, FixtureFile.class);
             for (FixtureProfile fp : file.profiles()) {
                 Profile profile = toProfile(fp);
-                profilesByUrl.put(normalize(profile.linkedInUrl()), profile);
+                String canonicalUrl = LinkedInProfileUrls.canonicalize(profile.linkedInUrl())
+                        .orElseThrow(() -> new ProfileSourceException(
+                                "Fixture entry has an invalid linkedInUrl: " + profile.linkedInUrl()));
+                profilesByUrl.put(canonicalUrl, profile);
             }
         } catch (IOException e) {
             throw new ProfileSourceException(
@@ -84,20 +95,28 @@ public class FixtureProfileSource implements ProfileSource {
     }
 
     private Profile toProfile(FixtureProfile fp) {
+        // Scalars pass through as-is: a missing/null field in the source
+        // data means the response omits it, not "" -- see spec.md,
+        // "Known profile returned": "omitting any field that is not
+        // present," and application.yml's
+        // spring.jackson.default-property-inclusion=non_null, which is
+        // what actually drops null fields from the JSON body.
         return Profile.builder(fp.linkedInUrl())
-                .name(orEmpty(fp.name()))
-                .headline(orEmpty(fp.headline()))
-                .location(orEmpty(fp.location()))
-                .about(orEmpty(fp.about()))
+                .name(fp.name())
+                .headline(fp.headline())
+                .location(fp.location())
+                .about(fp.about())
                 .experience(fp.experience() == null ? List.of() : fp.experience().stream()
+                        // e.g. a current role's endDate is null on purpose --
+                        // that's "present," not "unknown," and the response
+                        // should say so by omitting the field, not by
+                        // printing an empty string.
                         .map(e -> new Profile.Experience(
-                                orEmpty(e.title()), orEmpty(e.organization()),
-                                orEmpty(e.startDate()), orEmpty(e.endDate()), orEmpty(e.description())))
+                                e.title(), e.organization(), e.startDate(), e.endDate(), e.description()))
                         .toList())
                 .education(fp.education() == null ? List.of() : fp.education().stream()
                         .map(e -> new Profile.Education(
-                                orEmpty(e.institution()), orEmpty(e.degree()),
-                                orEmpty(e.fieldOfStudy()), orEmpty(e.startDate()), orEmpty(e.endDate())))
+                                e.institution(), e.degree(), e.fieldOfStudy(), e.startDate(), e.endDate()))
                         .toList())
                 .skills(orEmptyList(fp.skills()))
                 .certifications(orEmptyList(fp.certifications()))
@@ -106,18 +125,8 @@ public class FixtureProfileSource implements ProfileSource {
                 .build();
     }
 
-    private String orEmpty(String s) {
-        return s == null ? "" : s;
-    }
-
     private List<String> orEmptyList(List<String> l) {
         return l == null ? List.of() : l;
-    }
-
-    /** Strips query string and trailing slash so URL variants match the same fixture. */
-    private String normalize(String url) {
-        String noQuery = url.split("\\?", 2)[0];
-        return noQuery.endsWith("/") ? noQuery.substring(0, noQuery.length() - 1) : noQuery;
     }
 }
 
