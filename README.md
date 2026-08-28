@@ -78,12 +78,13 @@ domain/           Profile entity, ProfileSource port. Zero framework
                    imports -- compiles with plain javac, nothing else.
 application/       ProfileLookupService (the use case). Depends only on
                    the ProfileSource interface.
-infrastructure/    FixtureProfileSource, StubProfileSource -- the two
-                   adapters actually shipped -- plus the config that
-                   selects between them.
-interfaces/rest/   Controller, DTOs, filters, exception handling.
-                   Depends on the use case; knows nothing about fixtures
-                   or stubs.
+infrastructure/    FixtureProfileSource, StubProfileSource, and
+                   LinkedInOidcProfileSource -- the three adapters
+                   actually shipped -- plus the config that selects
+                   between them.
+interfaces/rest/   Controllers, DTOs, filters, exception handling.
+                   Depends on the use case; knows nothing about
+                   fixtures, stubs, or how the oidc adapter gets its data.
 ```
 
 Dependencies point inward only. `ProfileLookupService` has never heard of
@@ -107,6 +108,56 @@ adapter. The only file that knows both adapters exist is
   where a real third-party integration (LinkedIn OAuth for the
   *authenticated user's own* profile, say) would plug in later, without
   touching anything upstream of `ProfileSource`.
+
+## LinkedIn sign-in (OIDC self-lookup)
+
+A third `ProfileSource` adapter, alongside `fixture` and `stub`: real
+"Sign In with LinkedIn" via OpenID Connect — LinkedIn's one sanctioned
+self-serve product. **State this plainly, because it's easy to
+misread:** this does not, and structurally cannot, satisfy the brief's
+literal ask (arbitrary profile URL in, that profile's data out).
+LinkedIn's OIDC `userinfo` response describes only whoever just
+completed the consent screen — never a third party. It's included
+because it's a real, correctly-scoped integration worth demonstrating,
+not because it closes the scraping gap. See
+`openspec/changes/add-oidc-self-lookup/proposal.md` ("Why") for the full
+scope statement.
+
+**Set up and run it locally:**
+
+1. Register a LinkedIn Developer App at
+   [linkedin.com/developers](https://www.linkedin.com/developers/) and
+   enable the "Sign In with LinkedIn using OpenID Connect" product
+   (self-serve — no partnership approval needed, unlike Sales Navigator
+   or Talent Solutions).
+2. Under the app's Auth settings, add an authorized redirect URL that
+   matches `LINKEDIN_REDIRECT_URI` exactly (default:
+   `http://localhost:8080/v1/auth/linkedin/callback`).
+3. Set `PROFILE_SOURCE=oidc`, `LINKEDIN_CLIENT_ID`,
+   `LINKEDIN_CLIENT_SECRET`, and `LINKEDIN_REDIRECT_URI` (see
+   `.env.example`), then start the app. If any of the three LinkedIn
+   values are blank while `oidc` mode is selected, the app fails to
+   start with a clear message rather than failing on the first request.
+4. Visit
+   `http://localhost:8080/v1/auth/linkedin/login?profileUrl=https://www.linkedin.com/in/<your-handle>`
+   in a browser (the API key filter only guards `/v1/**` JSON endpoints,
+   not this browser-facing redirect) and complete LinkedIn's consent
+   screen.
+5. `GET /v1/profile?url=https://www.linkedin.com/in/<your-handle>` (with
+   your API key) now returns your name and photo. Any other URL still
+   returns the same 501 "no live data source" response as fixture/stub
+   mode — see `LinkedInOidcProfileSourceTest`.
+
+**Why the login endpoint takes a `profileUrl` parameter:** LinkedIn's
+OIDC response has no public-profile-URL claim — only an opaque member
+ID. The person consenting is the one person entitled to assert which
+URL is theirs; see design.md for the alternative considered and
+rejected (synthesizing a fake URL from the opaque ID).
+
+**Limitations, stated plainly, not discovered the hard way:** one
+in-memory "currently consented profile" slot, system-wide, cleared on
+restart — the second person to sign in overwrites the first. Fine for a
+solo demo; would need session-keyed storage for anything more.
 
 ## Decisions & trade-offs
 
@@ -233,10 +284,9 @@ dependency-coordinate details, not design decisions.
 
 ## What I'd do with more time
 
-- A real OAuth adapter behind `ProfileSource` for "Sign In with
-  LinkedIn," returning the *authenticated user's own* profile — the one
-  case LinkedIn does sanction, currently unimplemented because the
-  fixture adapter covers the demo need.
+- Session-keyed storage for the OIDC adapter's consented profile, so
+  more than one person could sign in at once — currently a single
+  in-memory slot, documented above as a stated demo-scoped limitation.
 - Distributed rate limiting (Bucket4j + Redis) for multi-instance
   deployment.
 - A CI workflow running `openspec validate --strict`, `mvn test`, and a
@@ -272,3 +322,9 @@ artifacts written before implementation:
 Once everything in `tasks.md` is checked off end-to-end against a real
 build, `openspec archive add-profile-lookup` moves the capability into
 `openspec/specs/` as the project's source of truth for the next change.
+
+`openspec/changes/add-oidc-self-lookup/` holds the same kind of planning
+artifacts for the LinkedIn OIDC adapter described above — its own
+proposal, `specs/oidc-self-lookup/spec.md`, design.md, and tasks.md,
+including the honest scope statement that this adapter doesn't (and
+can't) satisfy the brief's core arbitrary-lookup requirement.

@@ -76,6 +76,24 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!--
+          Spring Boot 4 split TestRestTemplate out of spring-boot-test
+          into its own module, and it isn't pulled transitively by
+          spring-boot-starter-test, confirmed by a real local build
+          failure (spring-projects/spring-boot#48588 covers the same
+          "resttestclient doesn't pull in restclient" gap). Both must be
+          declared explicitly; the version comes from spring-boot-starter-parent's BOM.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-resttestclient</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-restclient</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

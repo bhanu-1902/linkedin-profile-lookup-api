@@ -21,12 +21,21 @@ import java.util.stream.Collectors;
  * Plain servlet filter, not Spring Security -- see design.md, Decisions,
  * for why. A single header comparison doesn't need a security framework;
  * it needs a filter that either lets the request through or doesn't.
+ *
+ * Excludes {@code /v1/auth/linkedin/**}: those two endpoints are reached
+ * by a browser following a redirect (the user's own browser hitting
+ * /login, then LinkedIn's server redirecting that same browser to
+ * /callback) -- neither caller can attach a custom X-API-Key header, so
+ * gating them the same way as the JSON /v1/profile endpoint would make
+ * the OIDC sign-in flow permanently 401. CSRF protection for that flow
+ * comes from OAuthStateStore's single-use state parameter instead.
  */
 @Component
 @Order(1)
 public class ApiKeyAuthFilter extends OncePerRequestFilter {
 
     private static final String API_KEY_HEADER = "X-API-Key";
+    private static final String LINKEDIN_AUTH_PATH_PREFIX = "/v1/auth/linkedin/";
 
     private final Set<String> validApiKeys;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -45,7 +54,8 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
             HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        if (!request.getRequestURI().startsWith("/v1/")) {
+        String uri = request.getRequestURI();
+        if (!uri.startsWith("/v1/") || uri.startsWith(LINKEDIN_AUTH_PATH_PREFIX)) {
             filterChain.doFilter(request, response);
             return;
         }

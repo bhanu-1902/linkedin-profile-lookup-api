@@ -1,8 +1,9 @@
 package com.profilelookup.interfaces;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -31,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * profile.api-keys below, so bucket state can never leak between tests.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 @TestPropertySource(properties = {
         "profile.api-keys=key-known-profile,key-malformed-url,key-unknown-profile,"
                 + "key-sparse-fields,key-rate-limit",
@@ -135,5 +137,24 @@ class ProfileControllerIntegrationTest {
 
         assertThat(third.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(third.getHeaders().get("Retry-After")).isNotNull();
+    }
+
+    // Regression: LinkedInAuthController only exists when
+    // profile.source=oidc; this instance runs in fixture mode, so
+    // /v1/auth/linkedin/login has no handler. Before
+    // GlobalExceptionHandler.handleNoResourceFound was added, this
+    // fell into the generic 500 handler instead of a correct 404 --
+    // found via an actual local run of the oidc adapter, not by
+    // inspection. No API key needed: ApiKeyAuthFilter excludes this
+    // path (see its javadoc), so the request reaches the (missing)
+    // handler at all.
+    @Test
+    void unmappedLinkedInAuthPathInFixtureModeReturns404NotAGeneric500() {
+        ResponseEntity<String> response = rest.getForEntity(
+                urlFor("/v1/auth/linkedin/login?profileUrl=https://www.linkedin.com/in/example-profile"),
+                String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getHeaders().getContentType().toString()).contains("problem+json");
     }
 }
