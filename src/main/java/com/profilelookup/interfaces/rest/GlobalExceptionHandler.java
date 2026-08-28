@@ -32,6 +32,13 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(ProfileNotFoundException.class)
+    public ProblemDetail handleProfileNotFound(ProfileNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "No profile was available for this URL from the configured live source.");
+        problem.setType(URI.create("https://profilelookup.example/problems/profile-not-found"));
+        problem.setProperty("requestedUrl", ex.getRequestedUrl());
+        return problem;
+    }
     @ExceptionHandler(ProfileNotAvailableException.class)
     public ProblemDetail handleProfileNotAvailable(ProfileNotAvailableException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(

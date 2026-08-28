@@ -69,6 +69,7 @@ URL), and can return:
 | --- | --- |
 | 200 | Profile found; returns the available fields, omitting any not present |
 | 400 | `url` is missing or not a syntactically valid LinkedIn profile URL |
+| 404 | Live source is configured but no profile was available for this URL |
 | 429 | Caller exceeded the per-address rate limit, or the source itself is rate-limited (`Retry-After` header) |
 | 501 | No live data source is configured for this profile URL |
 | 502 | The configured source returned a response it could not use |
@@ -99,6 +100,19 @@ Dependencies point inward only. `ProfileLookupService` has never heard of
 `FixtureProfileSource`. `ProfileController` has never heard of either
 adapter. The only file that knows both adapters exist is
 `ProfileSourceConfig`.
+
+## Live LinkedIn source
+
+Default mode is still `fixture`.
+
+```bash
+export PROFILE_SOURCE=linkedin
+export LINKEDIN_SESSION_COOKIE='your-cookie-header'
+export LINKEDIN_PROFILE_URL_TEMPLATE='https://www.linkedin.com/in/{handle}'
+./mvnw spring-boot:run
+```
+
+Do not commit cookies. Live misses return 404.
 
 ## Public access & rate limiting
 

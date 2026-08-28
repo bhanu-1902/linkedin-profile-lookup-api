@@ -12,4 +12,5 @@ services:
         value: "20"
       - key: RATELIMIT_REFILL_SECONDS
         value: "60"
+      # Live deploy: set PROFILE_SOURCE=linkedin and secret LINKEDIN_* vars in the dashboard.
     healthCheckPath: /actuator/health

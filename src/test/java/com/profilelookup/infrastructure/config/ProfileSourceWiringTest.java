@@ -2,6 +2,7 @@ package com.profilelookup.infrastructure.config;
 
 import com.profilelookup.domain.ProfileSource;
 import com.profilelookup.infrastructure.fixture.FixtureProfileSource;
+import com.profilelookup.infrastructure.linkedin.LinkedInHttpProfileSource;
 import com.profilelookup.infrastructure.stub.StubProfileSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -32,6 +33,14 @@ class ProfileSourceWiringTest {
             assertThat(context).hasNotFailed();
             assertThat(context).hasSingleBean(ProfileSource.class);
             assertThat(context.getBean(ProfileSource.class)).isInstanceOf(StubProfileSource.class);
+        });
+    }
+    @Test
+    void selectsLinkedInSourceWhenConfigured() {
+        contextRunner.withPropertyValues("profile.source=linkedin").run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(ProfileSource.class);
+            assertThat(context.getBean(ProfileSource.class)).isInstanceOf(LinkedInHttpProfileSource.class);
         });
     }
 }

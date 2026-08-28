@@ -16,6 +16,13 @@ profile:
   source: ${PROFILE_SOURCE:fixture}
   fixture-path: classpath:fixtures/sample-profiles.json
 
+linkedin:
+  profile-url-template: ${LINKEDIN_PROFILE_URL_TEMPLATE:}
+  session-cookie: ${LINKEDIN_SESSION_COOKIE:}
+  csrf-token: ${LINKEDIN_CSRF_TOKEN:}
+  user-agent: ${LINKEDIN_USER_AGENT:Mozilla/5.0}
+  timeout-ms: ${LINKEDIN_TIMEOUT_MS:8000}
+
 ratelimit:
   capacity: ${RATELIMIT_CAPACITY:20}
   refill-period-seconds: ${RATELIMIT_REFILL_SECONDS:60}

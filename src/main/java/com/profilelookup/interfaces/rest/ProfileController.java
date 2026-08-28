@@ -5,6 +5,7 @@ import com.profilelookup.domain.LinkedInProfileUrls;
 import com.profilelookup.domain.Profile;
 import com.profilelookup.interfaces.rest.dto.ProfileResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.beans.factory.annotation.Value;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -34,9 +35,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProfileController {
 
     private final ProfileLookupService profileLookupService;
-
-    public ProfileController(ProfileLookupService profileLookupService) {
+    private final String profileSource;
+    public ProfileController(ProfileLookupService profileLookupService, @Value("${profile.source:fixture}") String profileSource) {
         this.profileLookupService = profileLookupService;
+        this.profileSource = profileSource;
     }
 
     @Operation(summary = "Look up a profile by URL",
@@ -55,6 +57,8 @@ public class ProfileController {
                             + "source is itself being rate-limited by its provider",
                     headers = @Header(name = "Retry-After", schema = @Schema(type = "integer"),
                             description = "Seconds to wait before retrying")),
+            @ApiResponse(responseCode = "404",
+                    description = "Live source is configured but no profile was available for this URL"),
             @ApiResponse(responseCode = "501",
                     description = "No live data source is configured for this profile URL"),
             @ApiResponse(responseCode = "502",
@@ -69,8 +73,12 @@ public class ProfileController {
                 .orElseThrow(() -> new InvalidProfileUrlException(url));
 
         Profile profile = profileLookupService.lookup(canonicalUrl)
-                .orElseThrow(() -> new ProfileNotAvailableException(canonicalUrl));
+                .orElseThrow(() -> missingProfile(canonicalUrl));
 
         return ProfileResponse.from(profile);
+    }
+    private RuntimeException missingProfile(String canonicalUrl) {
+        if ("linkedin".equals(profileSource)) return new ProfileNotFoundException(canonicalUrl);
+        return new ProfileNotAvailableException(canonicalUrl);
     }
 }

@@ -1,0 +1,2 @@
+- [x] Adapter and tests
+- [ ] Deploy public URL

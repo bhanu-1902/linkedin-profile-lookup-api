@@ -25,9 +25,7 @@
     <name>profile-lookup-api</name>
     <description>
         Hosted API returning structured profile JSON, built against a
-        ProfileSource port with fixture and stub adapters only -- see
-        openspec/changes/archive/2026-08-28-add-profile-lookup/design.md
-        for why no live LinkedIn-scraping adapter is shipped.
+        ProfileSource port with fixture, stub, and LinkedIn HTTP adapters.
     </description>
 
     <properties>
@@ -46,6 +44,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-restclient</artifactId>
         </dependency>
         <!--
           No spring-boot-starter-validation: URL validation lives in
