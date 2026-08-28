@@ -40,27 +40,16 @@ unrecognized profiles.
   a `detail` explaining that only fixture-backed profiles are served in
   this deployment
 
-### Requirement: API key authentication
-The system SHALL require a valid API key on every `/v1/**` request and
-SHALL reject requests missing one or presenting an unrecognized one.
-
-#### Scenario: Missing API key
-- **WHEN** a request to a `/v1/**` endpoint carries no `X-API-Key` header
-- **THEN** the system returns HTTP 401 with a problem+json body, and does
-  not invoke the profile lookup
-
-#### Scenario: Invalid API key
-- **WHEN** a request carries an `X-API-Key` header whose value does not
-  match a configured key
-- **THEN** the system returns HTTP 401 with a problem+json body
-
 ### Requirement: Rate limiting
-The system SHALL limit the number of requests a single API key may make
-within a rolling time window, and SHALL communicate the limit to callers
-who exceed it.
+The system SHALL limit the number of requests a single caller address may
+make within a rolling time window, and SHALL communicate the limit to
+callers who exceed it. No credential is required to call the endpoint --
+see `challenge-submission-readiness`'s "Public evaluator access"
+requirement for why: a challenge evaluator must be able to call the
+deployment directly, with rate limiting as the only defense against abuse.
 
 #### Scenario: Caller exceeds their rate limit
-- **WHEN** a caller's request rate for their API key exceeds the
+- **WHEN** a caller's request rate from their address exceeds the
   configured limit
 - **THEN** the system returns HTTP 429 with a `Retry-After` header and a
   problem+json body

@@ -10,7 +10,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
@@ -23,10 +22,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Token-bucket rate limiting, one bucket per API key (falls back to
- * remote address if no key was presented -- the auth filter, ordered
- * before this one, already rejects that case for /v1/**, so this only
- * matters for any future unauthenticated route).
+ * Token-bucket rate limiting, one bucket per caller address -- see
+ * openspec/changes/prepare-live-profile-source/design.md, "Remove the
+ * challenge API-key gate; retain rate limiting by client address." There is
+ * no API-key gate in front of this filter: the challenge deployment must be
+ * callable by an evaluator with no private credential, so the caller's
+ * resolved address is the only identity available to key a bucket by.
  *
  * Uses bucket4j-core directly rather than a Spring-integration starter
  * -- see design.md, Decisions.
@@ -34,10 +35,12 @@ import java.util.concurrent.TimeUnit;
  * Known limitation, stated plainly: buckets live in a
  * ConcurrentHashMap, so limits are per-instance. Fine for a demo;
  * documented in the README as the first thing to change (Bucket4j's
- * distributed mode + Redis) before running more than one instance.
+ * distributed mode + Redis) before running more than one instance. Also
+ * per-instance and address-keyed: callers behind the same NAT/proxy share a
+ * bucket, and the resolved address can be proxy-dependent -- see README,
+ * "Known limitations."
  */
 @Component
-@Order(2)
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final ConcurrentHashMap<String, Bucket> bucketsByKey = new ConcurrentHashMap<>();
@@ -75,8 +78,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String bucketKeyFor(HttpServletRequest request) {
-        String apiKey = request.getHeader("X-API-Key");
-        return apiKey != null ? apiKey : request.getRemoteAddr();
+        return request.getRemoteAddr();
     }
 
     private Bucket newBucket() {

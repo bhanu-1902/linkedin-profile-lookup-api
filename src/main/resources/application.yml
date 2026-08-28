@@ -12,20 +12,9 @@ server:
   port: ${PORT:8080}
 
 profile:
-  # fixture (default), stub, or oidc -- see ProfileSourceConfig
+  # fixture (default) or stub -- see ProfileSourceConfig
   source: ${PROFILE_SOURCE:fixture}
   fixture-path: classpath:fixtures/sample-profiles.json
-  # Comma-separated. Set via env var in real deployments -- never commit
-  # real keys. See .env.example.
-  api-keys: ${PROFILE_API_KEYS:demo-key-change-me}
-
-linkedin:
-  # Only required when profile.source=oidc -- see LinkedInOidcConfig,
-  # which fails fast at startup if oidc mode is selected and any of
-  # these are blank. See .env.example.
-  client-id: ${LINKEDIN_CLIENT_ID:}
-  client-secret: ${LINKEDIN_CLIENT_SECRET:}
-  redirect-uri: ${LINKEDIN_REDIRECT_URI:}
 
 ratelimit:
   capacity: ${RATELIMIT_CAPACITY:20}

@@ -21,8 +21,8 @@ Boot 4.1.x (Spring Framework 7 / Jakarta EE 11).
 - Fetching data from LinkedIn at runtime, by any method.
 - Supporting profile fields beyond what a legitimate LinkedIn data export
   contains.
-- Multi-tenant API key management (a small fixed set of keys is enough
-  for a demo).
+- Caller authentication or multi-tenant API key management (see
+  `prepare-live-profile-source` for why the endpoint is credential-free).
 
 ## Decisions
 
@@ -40,21 +40,23 @@ considered: a hand-rolled factory class switching on an enum — rejected as
 strictly more code for the same behavior once Spring's conditional beans
 do it declaratively.
 
-**No Spring Security.** API-key checking is a single `OncePerRequestFilter`
-comparing a header against a configured set of keys. Alternative
-considered: Spring Security with a custom `AuthenticationFilter` —
-rejected for two reasons: (1) Spring Security 7's default CSRF posture
-changed in ways that are easy to misconfigure for a stateless,
-non-session API and hard to verify without a live build; (2) pulling in
-the full framework for one header comparison is disproportionate to the
-problem. This is the kind of judgment call worth stating plainly in the
-README rather than hiding.
+**No Spring Security.** Rate limiting is a single `OncePerRequestFilter`
+checking a token bucket. Alternative considered: Spring Security with a
+custom filter chain — rejected for two reasons: (1) Spring Security 7's
+default CSRF posture changed in ways that are easy to misconfigure for a
+stateless, non-session API and hard to verify without a live build; (2)
+pulling in the full framework for what this endpoint actually needs is
+disproportionate to the problem. This is the kind of judgment call worth
+stating plainly in the README rather than hiding.
 
 **Bucket4j core directly, not a Spring-integration starter.** `bucket4j-core`
 has no Spring dependency, so its Spring Boot 4 compatibility isn't in
-question. Buckets are held in a `ConcurrentHashMap` keyed by API key —
-sufficient for a single instance; documented as a scaling limitation
-below rather than solved with Redis pre-emptively.
+question. Buckets are held in a `ConcurrentHashMap` keyed by caller
+address — sufficient for a single instance; documented as a scaling
+limitation below rather than solved with Redis pre-emptively. (This
+change originally keyed buckets by API key; see
+`openspec/changes/prepare-live-profile-source/` for why the credential
+requirement was removed and buckets re-keyed by address instead.)
 
 **RFC 9457 via Spring's native `ProblemDetail`.** Available since Spring
 Framework 6; no extra dependency. One `@RestControllerAdvice` produces

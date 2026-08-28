@@ -5,40 +5,29 @@ import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end: real HTTP calls through the real filter chain (API key,
- * rate limit) into the real controller, running the default "fixture"
- * profile. Each test below is one scenario from
- * openspec/changes/add-profile-lookup/specs/profile-lookup/spec.md --
- * the mapping is deliberate, not coincidental.
+ * End-to-end: real HTTP calls through the real filter chain (rate limit
+ * only -- there is no credential gate, see
+ * openspec/changes/prepare-live-profile-source/design.md, "Remove the
+ * challenge API-key gate") into the real controller, running the default
+ * "fixture" profile. Each test below is one scenario from
+ * openspec/specs/profile-lookup/spec.md -- the
+ * mapping is deliberate, not coincidental.
  *
- * Rate limit capacity is overridden to 2 so the 429 scenario is
- * deterministic in a handful of requests rather than needing 20+.
- *
- * Isolation: rate-limit buckets are keyed by API key, and JUnit 5 does
- * not guarantee method execution order. Sharing one key across tests
- * meant a test's pass/fail depended on which other tests already ran
- * and had partially spent that key's bucket. Every test that calls
- * /v1/profile now uses its own dedicated key, listed in
- * profile.api-keys below, so bucket state can never leak between tests.
+ * The rate-limit-exceeded scenario lives in its own
+ * {@code RateLimitFilterIntegrationTest} instead of here: buckets are now
+ * keyed by caller address rather than a per-test API key, so every request
+ * in this class shares one bucket (the test client's own address) -- a low
+ * capacity here would make these functional tests interfere with each
+ * other depending on run order, not just the dedicated rate-limit test.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
-@TestPropertySource(properties = {
-        "profile.api-keys=key-known-profile,key-malformed-url,key-unknown-profile,"
-                + "key-sparse-fields,key-rate-limit",
-        "ratelimit.capacity=2",
-        "ratelimit.refill-period-seconds=60"
-})
 class ProfileControllerIntegrationTest {
 
     @LocalServerPort
@@ -50,18 +39,12 @@ class ProfileControllerIntegrationTest {
         return "http://localhost:" + port + path;
     }
 
-    private HttpEntity<Void> withApiKey(String key) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-Key", key);
-        return new HttpEntity<>(headers);
-    }
-
-    // Scenario: Known profile returned
+    // Scenario: Known profile returned. Also covers "Public evaluator
+    // access": a known fixture profile returns 200 with no credential.
     @Test
     void knownFixtureProfileReturns200WithExpectedFields() {
-        ResponseEntity<String> response = rest.exchange(
-                urlFor("/v1/profile?url=https://www.linkedin.com/in/example-profile"),
-                HttpMethod.GET, withApiKey("key-known-profile"), String.class);
+        ResponseEntity<String> response = rest.getForEntity(
+                urlFor("/v1/profile?url=https://www.linkedin.com/in/example-profile"), String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains("\"name\":\"Alex Example\"");
@@ -71,9 +54,8 @@ class ProfileControllerIntegrationTest {
     // fields should not print "" or null for them at all.
     @Test
     void absentFieldsAreOmittedFromTheJsonBodyEntirely() {
-        ResponseEntity<String> response = rest.exchange(
-                urlFor("/v1/profile?url=https://www.linkedin.com/in/example-incomplete-profile"),
-                HttpMethod.GET, withApiKey("key-sparse-fields"), String.class);
+        ResponseEntity<String> response = rest.getForEntity(
+                urlFor("/v1/profile?url=https://www.linkedin.com/in/example-incomplete-profile"), String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).doesNotContain("\"about\"");
@@ -84,9 +66,8 @@ class ProfileControllerIntegrationTest {
     // Scenario: Malformed URL rejected
     @Test
     void malformedUrlReturns400ProblemJson() {
-        ResponseEntity<String> response = rest.exchange(
-                urlFor("/v1/profile?url=not-a-linkedin-url"),
-                HttpMethod.GET, withApiKey("key-malformed-url"), String.class);
+        ResponseEntity<String> response = rest.getForEntity(
+                urlFor("/v1/profile?url=not-a-linkedin-url"), String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getHeaders().getContentType().toString()).contains("problem+json");
@@ -95,64 +76,19 @@ class ProfileControllerIntegrationTest {
     // Scenario: Profile not present in any configured source
     @Test
     void wellFormedButUnknownUrlReturns501WithStableProblemType() {
-        ResponseEntity<String> response = rest.exchange(
-                urlFor("/v1/profile?url=https://www.linkedin.com/in/not-in-fixtures"),
-                HttpMethod.GET, withApiKey("key-unknown-profile"), String.class);
+        ResponseEntity<String> response = rest.getForEntity(
+                urlFor("/v1/profile?url=https://www.linkedin.com/in/not-in-fixtures"), String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
         assertThat(response.getBody()).contains("no-live-data-source");
     }
 
-    // Scenario: Missing API key
+    // Regression: an unmapped route previously fell into the generic 500
+    // handler instead of a correct 404 -- found via an actual local run,
+    // not by inspection. See GlobalExceptionHandler.handleNoResourceFound.
     @Test
-    void missingApiKeyReturns401() {
-        ResponseEntity<String> response = rest.getForEntity(
-                urlFor("/v1/profile?url=https://www.linkedin.com/in/example-profile"), String.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-    }
-
-    // Scenario: Invalid API key
-    @Test
-    void wrongApiKeyReturns401() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-Key", "not-the-right-key");
-
-        ResponseEntity<String> response = rest.exchange(
-                urlFor("/v1/profile?url=https://www.linkedin.com/in/example-profile"),
-                HttpMethod.GET, new HttpEntity<>(headers), String.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-    }
-
-    // Scenario: Caller exceeds their rate limit
-    @Test
-    void exceedingRateLimitReturns429WithRetryAfter() {
-        String url = urlFor("/v1/profile?url=https://www.linkedin.com/in/example-profile");
-        HttpEntity<Void> auth = withApiKey("key-rate-limit");
-
-        rest.exchange(url, HttpMethod.GET, auth, String.class); // 1
-        rest.exchange(url, HttpMethod.GET, auth, String.class); // 2 (capacity=2)
-        ResponseEntity<String> third = rest.exchange(url, HttpMethod.GET, auth, String.class);
-
-        assertThat(third.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
-        assertThat(third.getHeaders().get("Retry-After")).isNotNull();
-    }
-
-    // Regression: LinkedInAuthController only exists when
-    // profile.source=oidc; this instance runs in fixture mode, so
-    // /v1/auth/linkedin/login has no handler. Before
-    // GlobalExceptionHandler.handleNoResourceFound was added, this
-    // fell into the generic 500 handler instead of a correct 404 --
-    // found via an actual local run of the oidc adapter, not by
-    // inspection. No API key needed: ApiKeyAuthFilter excludes this
-    // path (see its javadoc), so the request reaches the (missing)
-    // handler at all.
-    @Test
-    void unmappedLinkedInAuthPathInFixtureModeReturns404NotAGeneric500() {
-        ResponseEntity<String> response = rest.getForEntity(
-                urlFor("/v1/auth/linkedin/login?profileUrl=https://www.linkedin.com/in/example-profile"),
-                String.class);
+    void unmappedRouteReturns404NotAGeneric500() {
+        ResponseEntity<String> response = rest.getForEntity(urlFor("/v1/no-such-endpoint"), String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getHeaders().getContentType().toString()).contains("problem+json");

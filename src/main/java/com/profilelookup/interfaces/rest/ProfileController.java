@@ -4,6 +4,12 @@ import com.profilelookup.application.ProfileLookupService;
 import com.profilelookup.domain.LinkedInProfileUrls;
 import com.profilelookup.domain.Profile;
 import com.profilelookup.interfaces.rest.dto.ProfileResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,6 +39,30 @@ public class ProfileController {
         this.profileLookupService = profileLookupService;
     }
 
+    @Operation(summary = "Look up a profile by URL",
+            description = "Returns structured profile data for a LinkedIn profile URL when the configured "
+                    + "profile source has it. See README, 'Known limitations,' for which sources are "
+                    + "configured in this deployment.")
+    @Parameter(name = "url", required = true,
+            description = "A LinkedIn profile URL, e.g. https://www.linkedin.com/in/<handle>")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Profile found; returns the available fields, "
+                    + "omitting any that are not present"),
+            @ApiResponse(responseCode = "400",
+                    description = "url is missing or not a syntactically valid LinkedIn profile URL"),
+            @ApiResponse(responseCode = "429",
+                    description = "The caller exceeded the per-address request rate limit, or the configured "
+                            + "source is itself being rate-limited by its provider",
+                    headers = @Header(name = "Retry-After", schema = @Schema(type = "integer"),
+                            description = "Seconds to wait before retrying")),
+            @ApiResponse(responseCode = "501",
+                    description = "No live data source is configured for this profile URL"),
+            @ApiResponse(responseCode = "502",
+                    description = "The configured source returned a response it could not use"),
+            @ApiResponse(responseCode = "503",
+                    description = "The configured source is unavailable or could not authenticate with its "
+                            + "provider")
+    })
     @GetMapping("/profile")
     public ProfileResponse getProfile(@RequestParam(required = false) String url) {
         String canonicalUrl = LinkedInProfileUrls.canonicalize(url)

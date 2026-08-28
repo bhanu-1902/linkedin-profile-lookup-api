@@ -26,9 +26,11 @@ brief is actually evaluating — without shipping a ToS-violating scraper.
 - New `StubProfileSource` adapter, returning a typed, documented
   "no live data source configured" response (RFC 9457 problem+json) for
   any URL not present in fixtures — explicitly, not a silent scraper.
-- New API-key authentication (single header, plain servlet filter — no
-  Spring Security, see design.md for why).
-- New rate limiting (token bucket per API key).
+- New rate limiting (token bucket per caller address, plain servlet
+  filter — no Spring Security, see design.md for why). No API key or
+  other credential is required to call the endpoint; see
+  `openspec/changes/prepare-live-profile-source/` for why that decision
+  was made after this proposal's initial API-key design.
 - New OpenAPI 3.1 documentation, auto-generated and served interactively.
 - **Explicitly out of scope**: any adapter that authenticates to LinkedIn
   and retrieves arbitrary third-party profile data. See design.md,
@@ -49,7 +51,7 @@ brief is actually evaluating — without shipping a ToS-violating scraper.
 - **New code**: domain (`Profile`, `ProfileSource`), application
   (`ProfileLookupService`), infrastructure (`FixtureProfileSource`,
   `StubProfileSource`, fixture loader), interfaces (REST controller, DTOs,
-  API-key filter, rate-limit filter, global exception handler).
+  rate-limit filter, global exception handler).
 - **New dependencies**: Spring Boot 4.1.x (web, validation, actuator),
   springdoc-openapi (OpenAPI 3.1 + Scalar UI), Bucket4j core (rate
   limiting).

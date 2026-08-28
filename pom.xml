@@ -26,8 +26,8 @@
     <description>
         Hosted API returning structured profile JSON, built against a
         ProfileSource port with fixture and stub adapters only -- see
-        openspec/changes/add-profile-lookup/design.md for why no live
-        LinkedIn-scraping adapter is shipped.
+        openspec/changes/archive/2026-08-28-add-profile-lookup/design.md
+        for why no live LinkedIn-scraping adapter is shipped.
     </description>
 
     <properties>
@@ -101,6 +101,21 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!--
+              Explicit release, not inherited java.version property
+              translation: this project uses Java records, and a
+              source/target fallback to Java 8 would silently break
+              record compilation instead of failing loudly. See
+              openspec/changes/prepare-live-profile-source/design.md,
+              "Pin the compiler release explicitly."
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <release>17</release>
+                </configuration>
             </plugin>
         </plugins>
     </build>

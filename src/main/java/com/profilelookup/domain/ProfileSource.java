@@ -11,7 +11,8 @@ import java.util.Optional;
  * throw for "I don't have this one," only for genuine failure (see
  * {@link ProfileSourceException}). Implementations must not perform any
  * action LinkedIn's terms of service prohibit; see
- * openspec/changes/add-profile-lookup/design.md, "Rejected approach."
+ * openspec/changes/archive/2026-08-28-add-profile-lookup/design.md,
+ * "Rejected approach."
  */
 public interface ProfileSource {
 
