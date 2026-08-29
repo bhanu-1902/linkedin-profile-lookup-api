@@ -7,27 +7,22 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.TestPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end: real HTTP calls through the real filter chain (rate limit
- * only -- there is no credential gate, see
- * openspec/changes/prepare-live-profile-source/design.md, "Remove the
- * challenge API-key gate") into the real controller, running the default
- * "fixture" profile. Each test below is one scenario from
- * openspec/specs/profile-lookup/spec.md -- the
- * mapping is deliberate, not coincidental.
+ * End-to-end against the optional fixture source so CI needs no LinkedIn
+ * cookie. Runtime default remains {@code linkedin}; these scenarios pin
+ * {@code profile.source=fixture}. Each test maps to a scenario in
+ * openspec/specs/profile-lookup/spec.md.
  *
- * The rate-limit-exceeded scenario lives in its own
- * {@code RateLimitFilterIntegrationTest} instead of here: buckets are now
- * keyed by caller address rather than a per-test API key, so every request
- * in this class shares one bucket (the test client's own address) -- a low
- * capacity here would make these functional tests interfere with each
- * other depending on run order, not just the dedicated rate-limit test.
+ * The rate-limit-exceeded scenario lives in
+ * {@code RateLimitFilterIntegrationTest}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
+@TestPropertySource(properties = "profile.source=fixture")
 class ProfileControllerIntegrationTest {
 
     @LocalServerPort

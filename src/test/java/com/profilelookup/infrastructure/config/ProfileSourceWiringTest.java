@@ -19,8 +19,17 @@ class ProfileSourceWiringTest {
             .withUserConfiguration(ProfileSourceConfig.class);
 
     @Test
-    void defaultsToFixtureSourceWhenPropertyIsUnset() {
+    void defaultsToLinkedInSourceWhenPropertyIsUnset() {
         contextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(ProfileSource.class);
+            assertThat(context.getBean(ProfileSource.class)).isInstanceOf(LinkedInHttpProfileSource.class);
+        });
+    }
+
+    @Test
+    void selectsFixtureSourceWhenConfigured() {
+        contextRunner.withPropertyValues("profile.source=fixture").run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context).hasSingleBean(ProfileSource.class);
             assertThat(context.getBean(ProfileSource.class)).isInstanceOf(FixtureProfileSource.class);
@@ -35,6 +44,7 @@ class ProfileSourceWiringTest {
             assertThat(context.getBean(ProfileSource.class)).isInstanceOf(StubProfileSource.class);
         });
     }
+
     @Test
     void selectsLinkedInSourceWhenConfigured() {
         contextRunner.withPropertyValues("profile.source=linkedin").run(context -> {

@@ -1,4 +1,4 @@
-# Render Blueprint. See README "Deploying" for the manual-setup alternative.
+# Render Blueprint. Set LINKEDIN_* secrets in the dashboard — never in this file.
 services:
   - type: web
     name: profile-lookup-api
@@ -7,10 +7,11 @@ services:
     plan: free
     envVars:
       - key: PROFILE_SOURCE
-        value: fixture
+        value: linkedin
       - key: RATELIMIT_CAPACITY
         value: "20"
       - key: RATELIMIT_REFILL_SECONDS
         value: "60"
-      # Live deploy: set PROFILE_SOURCE=linkedin and secret LINKEDIN_* vars in the dashboard.
+      # Dashboard secrets (sync: false so they are not stored in git):
+      # LINKEDIN_SESSION_COOKIE, LINKEDIN_PROFILE_URL_TEMPLATE, optional LINKEDIN_CSRF_TOKEN
     healthCheckPath: /actuator/health

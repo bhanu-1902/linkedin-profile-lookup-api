@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @TestPropertySource(properties = {
+        "profile.source=fixture",
         "ratelimit.capacity=2",
         "ratelimit.refill-period-seconds=60"
 })

@@ -36,7 +36,7 @@ public class ProfileController {
 
     private final ProfileLookupService profileLookupService;
     private final String profileSource;
-    public ProfileController(ProfileLookupService profileLookupService, @Value("${profile.source:fixture}") String profileSource) {
+    public ProfileController(ProfileLookupService profileLookupService, @Value("${profile.source:linkedin}") String profileSource) {
         this.profileLookupService = profileLookupService;
         this.profileSource = profileSource;
     }

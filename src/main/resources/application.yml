@@ -12,8 +12,8 @@ server:
   port: ${PORT:8080}
 
 profile:
-  # fixture (default) or stub -- see ProfileSourceConfig
-  source: ${PROFILE_SOURCE:fixture}
+  # linkedin (default), fixture, or stub -- see ProfileSourceConfig
+  source: ${PROFILE_SOURCE:linkedin}
   fixture-path: classpath:fixtures/sample-profiles.json
 
 linkedin:

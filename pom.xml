@@ -24,8 +24,8 @@
     <version>0.1.0</version>
     <name>profile-lookup-api</name>
     <description>
-        Hosted API returning structured profile JSON, built against a
-        ProfileSource port with fixture, stub, and LinkedIn HTTP adapters.
+        Hosted API returning structured profile JSON via a ProfileSource
+        port. Default adapter is LinkedIn HTTP; fixture and stub are optional.
     </description>
 
     <properties>

@@ -15,11 +15,17 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+/**
+ * Selects which {@link ProfileSource} adapter Spring wires into
+ * {@code ProfileLookupService}, based on {@code profile.source}.
+ * Default is {@code linkedin}. {@code fixture} and {@code stub} remain
+ * available for offline demos and tests.
+ */
 @Configuration
 @EnableConfigurationProperties(LinkedInProperties.class)
 public class ProfileSourceConfig {
     @Bean
-    @ConditionalOnProperty(name = "profile.source", havingValue = "fixture", matchIfMissing = true)
+    @ConditionalOnProperty(name = "profile.source", havingValue = "fixture")
     public ProfileSource fixtureProfileSource(@Value("${profile.fixture-path:classpath:fixtures/sample-profiles.json}") Resource fixtureResource) {
         return new FixtureProfileSource(fixtureResource);
     }
@@ -27,7 +33,7 @@ public class ProfileSourceConfig {
     @ConditionalOnProperty(name = "profile.source", havingValue = "stub")
     public ProfileSource stubProfileSource() { return new StubProfileSource(); }
     @Bean
-    @ConditionalOnProperty(name = "profile.source", havingValue = "linkedin")
+    @ConditionalOnProperty(name = "profile.source", havingValue = "linkedin", matchIfMissing = true)
     public ProfileSource linkedInProfileSource(LinkedInProperties properties) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(properties.getTimeoutMs());
