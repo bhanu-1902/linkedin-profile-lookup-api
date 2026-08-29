@@ -3,8 +3,7 @@ package com.profilelookup.domain;
 import java.util.Optional;
 
 /**
- * THE port. Every other design decision in this project exists to keep
- * this interface the only substitutable boundary.
+ * The port between the application layer and any source of profile data.
  *
  * Contract: given a syntactically valid LinkedIn profile URL, either
  * return the profile this source can supply, or return empty -- never

@@ -84,8 +84,8 @@ class ProfileControllerIntegrationTest {
     }
 
     // Regression: an unmapped route previously fell into the generic 500
-    // handler instead of a correct 404 -- found via an actual local run,
-    // not by inspection. See GlobalExceptionHandler.handleNoResourceFound.
+    // handler instead of a correct 404. See
+    // GlobalExceptionHandler.handleNoResourceFound.
     @Test
     void unmappedRouteReturns404NotAGeneric500() {
         ResponseEntity<String> response = rest.getForEntity(urlFor("/v1/no-such-endpoint"), String.class);

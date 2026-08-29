@@ -22,23 +22,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Token-bucket rate limiting, one bucket per caller address -- see
+ * Token-bucket rate limiting, one bucket per caller address. There is no
+ * authentication in front of this filter -- see
  * openspec/changes/prepare-live-profile-source/design.md, "Remove the
- * challenge API-key gate; retain rate limiting by client address." There is
- * no API-key gate in front of this filter: the challenge deployment must be
- * callable by an evaluator with no private credential, so the caller's
- * resolved address is the only identity available to key a bucket by.
+ * challenge API-key gate; retain rate limiting by client address" -- so
+ * the caller's resolved address is the only identity available to key a
+ * bucket by.
  *
  * Uses bucket4j-core directly rather than a Spring-integration starter
  * -- see design.md, Decisions.
  *
- * Known limitation, stated plainly: buckets live in a
- * ConcurrentHashMap, so limits are per-instance. Fine for a demo;
- * documented in the README as the first thing to change (Bucket4j's
- * distributed mode + Redis) before running more than one instance. Also
- * per-instance and address-keyed: callers behind the same NAT/proxy share a
- * bucket, and the resolved address can be proxy-dependent -- see README,
- * "Known limitations."
+ * Buckets live in a {@code ConcurrentHashMap}, so limits are enforced
+ * per instance, not cluster-wide; running more than one instance needs a
+ * shared backend (Bucket4j's distributed mode with Redis, not implemented
+ * here). Address-keying also means callers behind the same NAT or proxy
+ * share a bucket, and the resolved address depends on how the deployment
+ * handles forwarded headers.
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {

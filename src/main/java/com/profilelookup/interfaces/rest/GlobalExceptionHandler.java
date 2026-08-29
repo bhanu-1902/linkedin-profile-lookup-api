@@ -92,10 +92,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ProblemDetail handleNoResourceFound(NoResourceFoundException ex) {
-        // Reached for any genuinely unmapped route. Without this, that
-        // case fell into the generic handleUnexpected 500 below instead of
-        // a correct 404 -- caught by an actual local run, not by
-        // inspection.
+        // Reached for any unmapped route. Without this handler, that case
+        // falls into the generic handleUnexpected 500 below instead of a
+        // correct 404.
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.NOT_FOUND, "No such endpoint.");
         problem.setType(URI.create("https://profilelookup.example/problems/not-found"));

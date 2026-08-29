@@ -6,13 +6,13 @@ import com.profilelookup.domain.ProfileSource;
 import java.util.Optional;
 
 /**
- * Adapter: always returns empty. This is the documented, honest stand-in
- * for "no live data source configured" -- see
+ * Adapter: always returns empty, the documented signal for "no live data
+ * source configured" -- see
  * openspec/changes/archive/2026-08-28-add-profile-lookup/design.md,
- * "Rejected approach," for
- * why this is a deliberate architectural boundary rather than an
- * unfinished feature. The controller/exception-handler layer turns
- * "empty" into a typed 501 problem+json response, not a silent 404.
+ * "Rejected approach," for why this is a deliberate architectural
+ * boundary rather than an unfinished feature. The controller/exception-
+ * handler layer turns "empty" into a typed 501 problem+json response,
+ * not a silent 404.
  */
 public class StubProfileSource implements ProfileSource {
 
