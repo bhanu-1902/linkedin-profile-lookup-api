@@ -4,62 +4,155 @@ Hosted API that accepts a LinkedIn profile URL and returns structured JSON.
 **Default data source is the live LinkedIn HTTP adapter** (`profile.source=linkedin`).
 Optional `fixture` and `stub` sources remain available for offline demos and tests.
 
-## Quickstart
+## Run locally
 
-Requires JDK 17+. Maven Wrapper is committed.
+### Prerequisites
+
+- **JDK 17 or newer** (JDK 21/23 also work). On Windows, set `JAVA_HOME` to that JDK for the shell you use — if it still points at an older install (for example Java 8), Maven may fail with `UnsupportedClassVersionError` even when `java -version` looks fine.
+- No separate Maven install is required; the Maven Wrapper (`mvnw` / `mvnw.cmd`) is committed.
+
+### 1. Clone and enter the project
 
 ```bash
-git clone <this-repo>
-cd profile-lookup-api
+git clone https://github.com/bhanu-1902/linkedin-profile-lookup-api.git
+cd linkedin-profile-lookup-api
 ```
 
-### Live LinkedIn (default)
+### 2. Configure environment
 
-Set credentials in the environment (never commit them). Copy `.env.example` to `.env` if you prefer a local file:
+Default source is live LinkedIn (`PROFILE_SOURCE=linkedin`). Copy the example env file and fill in values — **never commit a real `.env`** (it is gitignored):
+
+```bash
+cp .env.example .env
+```
+
+Required for live mode:
+
+| Variable | Description |
+| --- | --- |
+| `LINKEDIN_SESSION_COOKIE` | Full `Cookie` header value (for example `li_at=...; JSESSIONID="ajax:..."`) |
+| `LINKEDIN_PROFILE_URL_TEMPLATE` | Upstream URL template containing `{handle}` |
+
+Optional:
+
+| Variable | Description |
+| --- | --- |
+| `LINKEDIN_CSRF_TOKEN` | CSRF token if the upstream expects it (often the `ajax:…` value) |
+| `LINKEDIN_USER_AGENT` | Defaults to `Mozilla/5.0` |
+| `LINKEDIN_TIMEOUT_MS` | Defaults to `8000` |
+| `PORT` | Defaults to `8080` |
+
+You can also export the same variables in the shell instead of using `.env`. Spring Boot reads process environment variables either way.
+
+`LINKEDIN_PROFILE_URL_TEMPLATE` must return **JSON** the mapper can read (`name` or `firstName`/`lastName`, `headline`, and related fields). A normal HTML profile page such as `https://www.linkedin.com/in/{handle}` typically results in HTTP **502** (`source-upstream-error`).
+
+### 3. Start the application
+
+**Windows (PowerShell):**
 
 ```powershell
-# PowerShell
-$env:LINKEDIN_SESSION_COOKIE = '<cookie header value>'
-$env:LINKEDIN_CSRF_TOKEN = '<optional>'
-$env:LINKEDIN_PROFILE_URL_TEMPLATE = '<JSON URL template containing {handle}>'
+$env:JAVA_HOME = 'C:\Program Files\Java\jdk-23'   # adjust to your JDK 17+ path
+$env:LINKEDIN_SESSION_COOKIE = 'li_at=...; JSESSIONID="ajax:..."'
+$env:LINKEDIN_CSRF_TOKEN = 'ajax:...'             # optional
+$env:LINKEDIN_PROFILE_URL_TEMPLATE = 'https://example.com/profiles/{handle}'
 .\mvnw.cmd spring-boot:run
 ```
 
+**macOS / Linux:**
+
 ```bash
-# macOS / Linux
-export LINKEDIN_SESSION_COOKIE='...'
-export LINKEDIN_CSRF_TOKEN='...'   # optional
-export LINKEDIN_PROFILE_URL_TEMPLATE='...{handle}...'
+export LINKEDIN_SESSION_COOKIE='li_at=...; JSESSIONID="ajax:..."'
+export LINKEDIN_CSRF_TOKEN='ajax:...'             # optional
+export LINKEDIN_PROFILE_URL_TEMPLATE='https://example.com/profiles/{handle}'
 ./mvnw spring-boot:run
 ```
 
-`LINKEDIN_PROFILE_URL_TEMPLATE` must return **JSON** the mapper can read
-(`name` or `firstName`/`lastName`, `headline`, etc.). A normal HTML
-`/in/{handle}` page will typically surface as HTTP **502**
-(`source-upstream-error`).
+Wait until the log shows Tomcat started on port `8080` (or your configured `PORT`).
+
+### 4. Verify the service is up
 
 ```bash
-curl "http://localhost:8080/v1/profile?url=https://www.linkedin.com/in/<handle>"
+curl http://localhost:8080/actuator/health
 ```
 
-Interactive docs: `http://localhost:8080/docs`  
-OpenAPI: `http://localhost:8080/v3/api-docs`  
-Health: `http://localhost:8080/actuator/health`
+Expected: `{"status":"UP"}` (or equivalent healthy payload).
 
-### Optional offline sources
+Useful URLs while the app is running:
+
+| URL | Purpose |
+| --- | --- |
+| `http://localhost:8080/docs` | Swagger UI |
+| `http://localhost:8080/v3/api-docs` | OpenAPI document |
+| `http://localhost:8080/actuator/health` | Health check |
+
+### 5. Test the profile endpoint
+
+**Successful lookup** (replace the handle with a profile your upstream can resolve):
 
 ```bash
-# Bundled sample JSON (no LinkedIn call)
+curl -i "http://localhost:8080/v1/profile?url=https://www.linkedin.com/in/<handle>"
+```
+
+**PowerShell equivalent:**
+
+```powershell
+Invoke-WebRequest -Uri "http://localhost:8080/v1/profile?url=https://www.linkedin.com/in/<handle>" -UseBasicParsing
+```
+
+**Validation error** (malformed URL → `400`):
+
+```bash
+curl -i "http://localhost:8080/v1/profile?url=not-a-linkedin-url"
+```
+
+**Live miss** (well-formed URL with no upstream profile → `404`):
+
+```bash
+curl -i "http://localhost:8080/v1/profile?url=https://www.linkedin.com/in/definitely-not-a-real-handle-xyz"
+```
+
+**Auth failure** (stop the app, unset the cookie, restart, then call again → `503` `source-unauthenticated`):
+
+```bash
+# omit LINKEDIN_SESSION_COOKIE, then:
+curl -i "http://localhost:8080/v1/profile?url=https://www.linkedin.com/in/<handle>"
+```
+
+### Optional: offline sources (no LinkedIn credentials)
+
+Use these when you only need to exercise the HTTP layer without a live upstream:
+
+```bash
+# Windows
+$env:PROFILE_SOURCE = 'fixture'
+.\mvnw.cmd spring-boot:run
+
+# macOS / Linux
 PROFILE_SOURCE=fixture ./mvnw spring-boot:run
-
-# Always empty (honest miss path for non-live modes)
-PROFILE_SOURCE=stub ./mvnw spring-boot:run
 ```
 
-**Windows note:** if `mvnw.cmd test` fails with `UnsupportedClassVersionError ... class file version 61.0`, point `JAVA_HOME` at JDK 17+ for that shell.
+Then:
 
-Run tests: `./mvnw test` or `mvnw.cmd test` (integration tests pin `fixture` so CI needs no cookie).
+```bash
+curl "http://localhost:8080/v1/profile?url=https://www.linkedin.com/in/example-profile"
+curl -i "http://localhost:8080/v1/profile?url=https://www.linkedin.com/in/not-in-fixtures"
+```
 
+Expected: `200` for the sample fixture profile; `501` for an unknown URL in fixture/stub mode.
+
+`PROFILE_SOURCE=stub` always returns the non-live miss path (`501`).
+
+### Run the automated tests
+
+```bash
+# Windows
+.\mvnw.cmd test
+
+# macOS / Linux
+./mvnw test
+```
+
+Integration tests pin `profile.source=fixture`, so the suite does not require LinkedIn credentials.
 ## API
 
 `GET /v1/profile?url=<LinkedIn profile URL>`
